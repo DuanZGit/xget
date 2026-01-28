@@ -24,6 +24,15 @@ import { PerformanceMonitor, addPerformanceHeaders } from './utils/performance.j
 import { addSecurityHeaders, createErrorResponse } from './utils/security.js';
 import { isDockerRequest, validateRequest } from './utils/validation.js';
 
+// ===================== 国内适配新增：亚洲节点过滤 =====================
+const ALLOWED_COLO = new Set([
+  'SIN', // 新加坡（推荐）
+  'TOK', // 东京（推荐）
+  'HKG', // 香港（推荐）
+  'KUL', // 吉隆坡（备用）
+  'BOM'  // 孟买（备用）
+]);
+
 /**
  * Main request handler with comprehensive caching, retry logic, and security measures.
  * @param {Request} request - The incoming HTTP request
@@ -36,6 +45,15 @@ async function handleRequest(request, env, ctx) {
   const monitor = new PerformanceMonitor();
 
   try {
+    // ===================== 国内适配新增：校验节点，非亚洲节点直接拒绝 =====================
+    const colo = request.cf?.colo;
+    if (!colo || !ALLOWED_COLO.has(colo)) {
+      return new Response(`仅支持亚洲节点访问，当前节点：${colo || '未知'}，请切换网络重试`, { 
+        status: 403,
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      });
+    }
+
     // Create config with environment variable overrides
     const config = env ? createConfig(env) : CONFIG;
     const url = new URL(request.url);
@@ -221,7 +239,8 @@ async function handleRequest(request, env, ctx) {
                     // Regular file download headers
                     Object.assign(fetchOptions, {
                       cf: {
-                        http3: true,
+                        // ===================== 国内适配修改：禁用 HTTP/3 =====================
+                        http3: false, // 原代码为 true，国内拦截严重，改为 false
                         cacheTtl: config.CACHE_DURATION,
                         cacheEverything: true,
                         minify: {
