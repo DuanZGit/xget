@@ -3,7 +3,7 @@ name = "xget"
 main = "src/index.js"
 compatibility_date = "2024-10-22"
 compatibility_flags = ["nodejs_compat"]
-workers_dev = false
+workers_dev = true
 
 [placement]
 mode = "smart"
@@ -13,12 +13,29 @@ enabled = false
 head_sampling_rate = 1
 
 [observability.logs]
-enabled = true
+enabled = false
 head_sampling_rate = 1
-persist = true
-invocation_logs = true
+persist = false
+invocation_logs = false
 
 [observability.traces]
-enabled = true
-persist = true
+enabled = false
+persist = false
 head_sampling_rate = 1
+
+[vars]
+TIMEOUT_SECONDS = 60  # 延长请求超时，适配国内跨境网络
+CACHE_DURATION = 3600  # 缓存1小时，提高国内访问命中率
+NODE_ENV = "production"  # 生产环境模式，优化执行效率
+
+[build]
+command = "npm install --registry=https://registry.npmmirror.com"  # 国内淘宝源安装依赖
+
+[build.upload]
+dir = "src"  # 直接上传src目录，无需构建
+format = "modules"  # 模块化格式，适配Workers
+
+# 网络配置（国内协议适配）
+[network]
+http2 = true  # 启用HTTP/2，禁用HTTP/3（国内运营商兼容差）
+tls_version = "TLSv1.2"  # 降级TLS版本，适配国内网络
